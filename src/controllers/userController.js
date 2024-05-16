@@ -1,8 +1,10 @@
-const User = require("../models/usersModel");
+const User = require("../models/userModel");
 const { body, validationResult } = require("express-validator");
 const asyncHandler = require("express-async-handler");
 const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
 const passport = require("passport");
+const verifyToken = require("./verifyToken")
 
 exports.create_user_post = [
 
@@ -21,12 +23,14 @@ exports.create_user_post = [
     return value === req.body.password;
   }),
 // Process request after validation and sanitization.
+
 asyncHandler( async (req, res, next) => {
   const errors = validationResult(req);
+  console.log(errors)
   if (!errors.isEmpty()) {
         // Store the errors in the flash messages
         errors.array().forEach((error) => {
-          req.flash('error', error.msg);
+          console.log('error', error.msg);
         });
         // Render the sign-up page again with the errors
         return res.send(errors);
@@ -35,6 +39,8 @@ asyncHandler( async (req, res, next) => {
 
     bcrypt.hash(req.body.password, 10, async (err, hashedPassword) => {
     try {
+
+      console.log(req.body)
       const user = new User({
         
         email: req.body.email,
@@ -42,7 +48,8 @@ asyncHandler( async (req, res, next) => {
         password: hashedPassword,
         
       });
-      req.session.user = user;
+      console.log(user)
+     // req.session.user = user;
       const result = await user.save();
       res.send(user);
     } catch(err) {
@@ -52,18 +59,67 @@ asyncHandler( async (req, res, next) => {
   }),
 ];
 
-exports.sign_in_post = passport.authenticate("local", {
-  successRedirect: "/blog/successful-signin",
-  failureRedirect: "/"
+exports.sign_in_post = asyncHandler(async (req, res) => {
+
+
+  // Retrieve user credentials from the request body 
+const user = {
+  mail: req.body.email,
+  password:req.body.password,
+ 
+}
+
+  // For demonstration purposes, let's assume you've already authenticated the user and retrieved their details
+  const dataUser = await User.findOne({ email: user.mail });
+  console.log(dataUser);
+  const match = await bcrypt.compare(user.password, dataUser.password);
+  console.log(match);
+
+  if (!dataUser) {
+    return console.log('Incorrect username' );
+   
+  }
+  if (!match) {
+    return console.log('Incorrect password');
+   
+  }else {
+  // Assuming user details are retrieved and stored in the `user` object
+  
+
+  // Sign JWT token
+  jwt.sign({ user }, 'secret_key', {expiresIn: '1d'}, (err, token) => {
+    if (err) {
+      // Handle error
+      res.status(500).json({ error: 'Failed to generate token' });
+    } else {
+      // Send token as response
+      res.json({ token });
+    }
+  });
+};
 });
 
 
 
-  exports.logOut_get = ("/log-out", (req, res, next) => {
-    req.logout((err) => {
-      if (err) {
-        return next(err);
-      }
-      res.redirect("/");
-    });
+
+
+  exports.logOut_get = ( (req, res, next) => {
+    const token = req.token;
+
+  // Call the verifyToken function
+  verifyToken(token, (err, authData) => {
+    if (err) {
+      res.sendStatus(403);
+    } else {
+      res.json({
+        message: 'log Out',
+        authData
+      });
+    }
   });
+
+    console.log("log out")
+   
+  });
+
+  

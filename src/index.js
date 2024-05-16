@@ -24,6 +24,7 @@ app.use(cors());
 const instaCLoneRouter = require('./routes/instaCloneRoutes');
 const indexRouter = require('./routes/index');
 
+app.use(express.json());
 app.use('/', indexRouter);
 app.use('/instaCLone', instaCLoneRouter);
 

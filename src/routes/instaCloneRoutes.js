@@ -1,5 +1,6 @@
 const express = require("express");
 const router = express.Router();
+const verifyToken = require('./verifyToken');
 
 
 // Require controller modules.
@@ -35,7 +36,7 @@ router.post("/user", user_controller.create_user_post);
 router.post("/sign-in", user_controller.sign_in_post);
 
 // get request for loging out
-router.get("/sign-in", user_controller.logOut_get);
+router.get("/log-out", verifyToken, user_controller.logOut_get);
 
 // New route for successful sign-in
 router.get("/successful-signin", (req, res) => {
@@ -54,3 +55,5 @@ router.get("/successful-signin", (req, res) => {
   });
 
   module.exports = router;
+
+  
